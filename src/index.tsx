@@ -3,7 +3,7 @@ import { useFetch, Response } from "@raycast/utils";
 import { useState } from "react";
 import { URLSearchParams } from "node:url";
 import xml2js from "xml2js";
-import { formatDistanceToNow } from 'date-fns';
+import { add, formatDistanceToNow } from 'date-fns';
 
 export default function Command() {
   const [searchText, setSearchText] = useState("");
@@ -61,11 +61,14 @@ function SearchListItem({ id, published, title, authors}: SearchListItemProps) {
   ];
   
   const authorsString = authors ? authors.join(", ") : "";
+  const multipleAuthors = authorsString.split(",").length > 1;
+  const addToAuthor = multipleAuthors ? " et al." : "";
+  const primaryAuthor = authorsString.split(",")[0] + addToAuthor;
 
   return (
     <List.Item 
       title={title}
-      subtitle={authorsString}
+      subtitle={primaryAuthor}
       // accessoryTitle={category}
       // actions={<ActionPanel><Action title="Open PDF" url={pdf_link} /></ActionPanel>}
       accessories={accessories}
