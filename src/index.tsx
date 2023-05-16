@@ -34,7 +34,7 @@ export default function Command() {
             id={searchResult.id[0]}
             published={searchResult.published[0]}
             title={searchResult.title[0]}
-            authors={searchResult.author[0]}
+            authors={searchResult.authors}
             // category={searchResult.category[0]}
             // pdf_link={searchResult.link || ""}
           />
@@ -48,7 +48,7 @@ interface SearchListItemProps {
   id: string;
   published: string;
   title: string;
-  authors: { [key: string]: string }
+  authors: string[];
   // category: string;
   // pdf_link: string;
 }
@@ -60,13 +60,17 @@ function SearchListItem({ id, published, title, authors}: SearchListItemProps) {
     { tag: timeAgo },
   ];
   
-  const names = authors.map(author => author.name[0]);
+  const authorsString = authors ? authors.join(", ") : "";
 
-  // const primaryAuthor = authors[0];
-  // const authorsString = authors ? authors.join(", ") : "";
-  console.log(names)
-
-  return <List.Item title={title} accessories={accessories} />
+  return (
+    <List.Item 
+      title={title}
+      subtitle={authorsString}
+      // accessoryTitle={category}
+      // actions={<ActionPanel><Action title="Open PDF" url={pdf_link} /></ActionPanel>}
+      accessories={accessories}
+    />
+  );
 }
 
 async function parseResponse(response: Response): Promise<SearchResult[]> {
@@ -82,9 +86,9 @@ async function parseResponse(response: Response): Promise<SearchResult[]> {
         id: entry.id,
         published: entry.published,
         title: entry.title,
-        // summary: entry.summary,
-        category: entry.category,
-        author: entry.author,
+        authors: entry.author.map((a: any) => a.name),
+        // category: entry.category.$.term,
+        // link: entry.link.find((l: any) => l.$.type === "application/pdf").$.href,
       };
     });
   });
@@ -94,8 +98,7 @@ interface SearchResult {
   id: string;
   published: string;
   title: string;
-  // summary: string;
+  authors: string[];
   // category: string;
-  link: string;
-  author: [];
+  // link: string;
 }
