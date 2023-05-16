@@ -20,6 +20,8 @@ export default function Command() {
     }
   );
 
+  console.log(data)
+
   return (
     <List
       isLoading={isLoading}
@@ -36,7 +38,7 @@ export default function Command() {
             title={searchResult.title[0]}
             authors={searchResult.authors}
             // category={searchResult.category[0]}
-            // pdf_link={searchResult.link || ""}
+            pdf_link={searchResult.link || ""}
           />
         ))}
       </List.Section>
@@ -50,10 +52,10 @@ interface SearchListItemProps {
   title: string;
   authors: string[];
   // category: string;
-  // pdf_link: string;
+  pdf_link: string;
 }
 
-function SearchListItem({ id, published, title, authors}: SearchListItemProps) {
+function SearchListItem({ id, published, title, authors, pdf_link}: SearchListItemProps) {
   const date = new Date(published);
   const timeAgo = formatDistanceToNow(date, { addSuffix: true });
   const accessories = [
@@ -65,12 +67,16 @@ function SearchListItem({ id, published, title, authors}: SearchListItemProps) {
   const addToAuthor = multipleAuthors ? " et al." : "";
   const primaryAuthor = authorsString.split(",")[0] + addToAuthor;
 
+  // pdf_link = pdf_link ? pdf_link : "";
+
+  // category = category ? category : "";
+  // console.log(category);
+
   return (
     <List.Item 
       title={title}
       subtitle={primaryAuthor}
-      // accessoryTitle={category}
-      // actions={<ActionPanel><Action title="Open PDF" url={pdf_link} /></ActionPanel>}
+      actions={<ActionPanel><Action.OpenInBrowser title="Open PDF" url={pdf_link} /></ActionPanel>}
       accessories={accessories}
     />
   );
@@ -85,13 +91,33 @@ async function parseResponse(response: Response): Promise<SearchResult[]> {
   // Parse the XML string
   return parser.parseStringPromise(xml).then((result: any) => {
     return result.feed.entry.map((entry: any) => {
+      let pdfLink = "";
+      let categories = "";
+
+      // Check if link is not undefined
+      if(entry.link) {
+        const pdfLinkElement = entry.link.find((link: any) => link.rel[0] === "related" && link.type[0] === "application/pdf");
+        if(pdfLinkElement) {
+          pdfLink = pdfLinkElement.href[0];
+        }
+      }
+
+      // Check if category is not undefined
+      if(entry.category) {
+        if(Array.isArray(entry.category)){
+          categories = entry.category.map((category: any) => category.term).join(", ");
+        } else {
+          categories = entry.category.term;
+        }
+      }
+
       return {
         id: entry.id,
         published: entry.published,
         title: entry.title,
         authors: entry.author.map((a: any) => a.name),
-        // category: entry.category.$.term,
-        // link: entry.link.find((l: any) => l.$.type === "application/pdf").$.href,
+        category: categories,
+        link: pdfLink,
       };
     });
   });
@@ -102,6 +128,6 @@ interface SearchResult {
   published: string;
   title: string;
   authors: string[];
-  // category: string;
-  // link: string;
+  category: string;
+  link: string;
 }
