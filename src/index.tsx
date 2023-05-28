@@ -1,4 +1,4 @@
-import { ActionPanel, Action, List, Detail, Icon } from "@raycast/api";
+import { ActionPanel, Action, List, Detail, Icon, Color } from "@raycast/api";
 import { useFetch, Response } from "@raycast/utils";
 import { useState } from "react";
 import { URLSearchParams } from "node:url";
@@ -51,7 +51,7 @@ export default function Command() {
   });
 
   const filteredData = data?.filter((entry: SearchResult) => {
-    return true;
+    return category == "" || entry.category.includes(category);
   });
 
   return (
@@ -68,20 +68,21 @@ export default function Command() {
           onChange={(newValue) => setCategory(newValue as ArxivCategory)}
         >
           {Object.entries(ArxivCategory).map(([name, value]) => (
-            <List.Dropdown.Item key={value} title={name} value={value} />
+            <List.Dropdown.Item key={name} title={name} value={value} />
           ))}
         </List.Dropdown>
       }
     >
-      <List.Section title="Results" subtitle={data?.length + ""}>
-        {data?.map((searchResult: SearchResult) => (
+      <List.Section title="Results" subtitle={filteredData?.length + ""}>
+        {filteredData?.map((searchResult: SearchResult) => (
           <SearchListItem
             key={searchResult.id ? searchResult.id[0] : ""}
             id={searchResult.id ? searchResult.id[0] : ""}
             published={searchResult.published}
             title={searchResult.title ? searchResult.title[0] : ""}
             authors={searchResult.authors}
-            category={searchResult.category ? searchResult.category.split(".")[0] : ""}
+            category={searchResult.category ? searchResult.category : ""}
+            first_category={searchResult.category ? searchResult.category.split(".")[0] : ""}
             pdf_link={searchResult.link || ""}
           />
         ))}
@@ -91,7 +92,8 @@ export default function Command() {
 }
 
 enum ArxivCategory {
-  Physics = "physics",
+  Physics = "",
+  // Physics is split into multiple subcategories
   Mathematics = "math",
   ComputerScience = "cs",
   QuantitativeBiology = "q-bio",
@@ -102,16 +104,28 @@ enum ArxivCategory {
   All = "",
 }
 
+enum ArxivCategoryColour {
+  "physics" = Color.Blue,
+  "math" = Color.Green,
+  "cs" = Color.Red,
+  "q-bio" = Color.Yellow,
+  "q-fin" = Color.Purple,
+  "stat" = Color.Orange,
+  "eess" = Color.Purple,
+  "econ" = Color.Magenta,
+}
+
 interface SearchListItemProps {
   id: string;
   published: string;
   title: string;
   authors: string[];
   category: string;
+  first_category: string;
   pdf_link: string;
 }
 
-function SearchListItem({ id, published, title, authors, category, pdf_link }: SearchListItemProps) {
+function SearchListItem({ id, published, title, authors, category, first_category, pdf_link }: SearchListItemProps) {
   const date = new Date(published);
   const timeAgo = formatDistanceToNow(date, { addSuffix: true });
   const accessories = [{ tag: timeAgo }];
@@ -121,11 +135,15 @@ function SearchListItem({ id, published, title, authors, category, pdf_link }: S
   const addToAuthor = multipleAuthors ? " et al." : "";
   const primaryAuthor = authorsString.split(",")[0] + addToAuthor;
 
+  const categoryColour = ArxivCategoryColour[first_category as keyof typeof ArxivCategoryColour];
+
   return (
     <List.Item
+      id={id}
+      icon={{ source: Icon.Circle, tintColor: categoryColour }}
       title={title}
-      // subtitle={primaryAuthor}
-      subtitle={category}
+      subtitle={primaryAuthor}
+      // subtitle={category}
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open PDF" url={pdf_link} icon={{ source: Icon.Link }} />
