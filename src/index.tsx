@@ -6,20 +6,21 @@ import xml2js from "xml2js";
 import { add, formatDistanceToNow } from "date-fns";
 import natural from "natural";
 
-const defaultText = "Toy Model Universality Bilal";
+const defaultText = "In-Context Learning";
 // const defaultText = "Attention Is All You Need Vaswani";
-let maxResults = 10;
+let maxResults = 30;
 
 export default function Command() {
   const [searchText, setSearchText] = useState("");
+  const [category, setCategory] = useState(ArxivCategory.All);
 
   let { data, isLoading } = useFetch(
     "http://export.arxiv.org/api/query?" +
       // send the search query to the API
       new URLSearchParams({
-        search_query: searchText.length === 0 ? defaultText : searchText,
-        sortBy: "relevance",
-        sortOrder: "descending",
+        search_query: `${searchText.length === 0 ? defaultText : searchText}`,
+        // sortBy: "relevance",
+        // sortOrder: "descending",
         // start: "0",
         max_results: maxResults.toString(),
       }),
@@ -28,7 +29,8 @@ export default function Command() {
     }
   );
 
-  // console.log(data?.length)
+  // console.log("Parsed. Data length:");
+  // console.log(data?.length);
 
   // data = data?.filter((entry: SearchResult) => entry.title);
 
@@ -48,12 +50,28 @@ export default function Command() {
     return bTitleSimiarlity - aTitleSimilarity;
   });
 
+  const filteredData = data?.filter((entry: SearchResult) => {
+    return true;
+  });
+
   return (
     <List
       isLoading={isLoading}
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search arXiv papers by title, author, or abstract"
       throttle={true}
+      searchBarAccessory={
+        <List.Dropdown
+          tooltip="Select Page"
+          defaultValue={ArxivCategory.All}
+          storeValue
+          onChange={(newValue) => setCategory(newValue as ArxivCategory)}
+        >
+          {Object.entries(ArxivCategory).map(([name, value]) => (
+            <List.Dropdown.Item key={value} title={name} value={value} />
+          ))}
+        </List.Dropdown>
+      }
     >
       <List.Section title="Results" subtitle={data?.length + ""}>
         {data?.map((searchResult: SearchResult) => (
@@ -63,7 +81,7 @@ export default function Command() {
             published={searchResult.published}
             title={searchResult.title ? searchResult.title[0] : ""}
             authors={searchResult.authors}
-            // category={searchResult.category[0]}
+            category={searchResult.category ? searchResult.category.split(".")[0] : ""}
             pdf_link={searchResult.link || ""}
           />
         ))}
@@ -72,16 +90,28 @@ export default function Command() {
   );
 }
 
+enum ArxivCategory {
+  Physics = "physics",
+  Mathematics = "math",
+  ComputerScience = "cs",
+  QuantitativeBiology = "q-bio",
+  QuantitativeFinance = "q-fin",
+  Statistics = "stat",
+  ElectricalEngineeringAndSystemsScience = "eess",
+  Economics = "econ",
+  All = "",
+}
+
 interface SearchListItemProps {
   id: string;
   published: string;
   title: string;
   authors: string[];
-  // category: string;
+  category: string;
   pdf_link: string;
 }
 
-function SearchListItem({ id, published, title, authors, pdf_link }: SearchListItemProps) {
+function SearchListItem({ id, published, title, authors, category, pdf_link }: SearchListItemProps) {
   const date = new Date(published);
   const timeAgo = formatDistanceToNow(date, { addSuffix: true });
   const accessories = [{ tag: timeAgo }];
@@ -94,7 +124,8 @@ function SearchListItem({ id, published, title, authors, pdf_link }: SearchListI
   return (
     <List.Item
       title={title}
-      subtitle={primaryAuthor}
+      // subtitle={primaryAuthor}
+      subtitle={category}
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open PDF" url={pdf_link} icon={{ source: Icon.Link }} />
@@ -112,52 +143,55 @@ async function parseResponse(response: Response): Promise<SearchResult[]> {
   // Read the body content as a string
   const xml = await response.text();
 
-  console.log(xml);
+  // console.log(xml);
 
   // Parse the XML string
   return parser.parseStringPromise(xml).then((result: any) => {
-    return result.feed.entry.map((entry: any) => {
-      let pdfLink = "";
-      let categories = "";
-      let published = "";
+    if (result.feed.entry) {
+      return result.feed.entry.map((entry: any) => {
+        let pdfLink = "";
+        let categories = "";
+        let published = "";
 
-      // Check if link is not undefined
-      if (entry.link) {
-        const pdfLinkElement = entry.link.find(
-          (link: any) => link.rel[0] === "related" && link.type[0] === "application/pdf"
-        );
-        if (pdfLinkElement) {
-          pdfLink = pdfLinkElement.href[0];
+        // Check if link is not undefined
+        if (entry.link) {
+          const pdfLinkElement = entry.link.find(
+            (link: any) =>
+              link && link.rel && link.rel[0] === "related" && link.type && link.type[0] === "application/pdf"
+          );
+          if (pdfLinkElement && pdfLinkElement.href) {
+            pdfLink = pdfLinkElement.href[0];
+          }
         }
-      }
 
-      // Check if category is not undefined
-      if (entry.category) {
-        if (Array.isArray(entry.category)) {
-          categories = entry.category.map((category: any) => category.term).join(", ");
+        // Check if category is not undefined
+        if (entry.category) {
+          if (Array.isArray(entry.category)) {
+            categories = entry.category.map((category: any) => category.term).join(", ");
+          } else {
+            categories = entry.category.term;
+          }
+        }
+
+        // Check if published is not undefined
+        if (entry.published) {
+          published = entry.published[0];
         } else {
-          categories = entry.category.term;
+          published = "";
         }
-      }
 
-      // Check if published is not undefined
-      if (entry.published) {
-        published = entry.published[0];
-      } else {
-        published = "";
-      }
-
-      return {
-        id: entry.id,
-        published: published,
-        // published: "2023-02-06T18:59:20Z",
-        title: entry.title,
-        authors: entry.author.map((a: any) => a.name),
-        category: categories,
-        link: pdfLink,
-        // link: "https://www.google.com"
-      };
-    });
+        return {
+          id: entry.id,
+          published: published,
+          title: entry.title,
+          authors: entry.author.map((a: any) => a.name),
+          category: categories,
+          link: pdfLink,
+        };
+      });
+    } else {
+      return [];
+    }
   });
 }
 
