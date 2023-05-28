@@ -6,9 +6,8 @@ import xml2js from "xml2js";
 import { add, formatDistanceToNow } from "date-fns";
 import natural from "natural";
 
-const defaultText = "In-Context Learning";
-// const defaultText = "Attention Is All You Need Vaswani";
-let maxResults = 30;
+const DEFAULT_TEXT = "";
+const MAX_RESULTS = 30;
 
 export default function Command() {
   const [searchText, setSearchText] = useState("");
@@ -18,31 +17,21 @@ export default function Command() {
     "http://export.arxiv.org/api/query?" +
       // send the search query to the API
       new URLSearchParams({
-        search_query: `${searchText.length === 0 ? defaultText : searchText}`,
-        // sortBy: "relevance",
-        // sortOrder: "descending",
-        // start: "0",
-        max_results: maxResults.toString(),
+        search_query: `${searchText.length === 0 ? DEFAULT_TEXT : searchText}`,
+        sortBy: "relevance",
+        sortOrder: "descending",
+        max_results: MAX_RESULTS.toString(),
       }),
     {
       parseResponse: parseResponse,
     }
   );
 
-  // console.log("Parsed. Data length:");
-  // console.log(data?.length);
-
-  // data = data?.filter((entry: SearchResult) => entry.title);
-
-  // console.log(data?.length)
-
   // Order data by similarity to search query
   data = data?.sort((a: SearchResult, b: SearchResult) => {
-    let textToCompare = searchText.length === 0 ? defaultText : searchText;
+    let textToCompare = searchText.length === 0 ? DEFAULT_TEXT : searchText;
     const aTitle = a.title ? a.title[0] : "";
     const bTitle = b.title ? b.title[0] : "";
-    const aAuthors = a.authors ? a.authors.join(", ") : "";
-    const bAuthors = b.authors ? b.authors.join(", ") : "";
 
     const aTitleSimilarity = natural.DiceCoefficient(aTitle, textToCompare);
     const bTitleSimiarlity = natural.DiceCoefficient(bTitle, textToCompare);
@@ -92,6 +81,7 @@ export default function Command() {
 }
 
 enum ArxivCategory {
+  All = "",
   Physics = "",
   // Physics is split into multiple subcategories
   Mathematics = "math",
@@ -101,7 +91,6 @@ enum ArxivCategory {
   Statistics = "stat",
   ElectricalEngineeringAndSystemsScience = "eess",
   Economics = "econ",
-  All = "",
 }
 
 enum ArxivCategoryColour {
@@ -161,8 +150,6 @@ async function parseResponse(response: Response): Promise<SearchResult[]> {
   // Read the body content as a string
   const xml = await response.text();
 
-  // console.log(xml);
-
   // Parse the XML string
   return parser.parseStringPromise(xml).then((result: any) => {
     if (result.feed.entry) {
@@ -171,7 +158,7 @@ async function parseResponse(response: Response): Promise<SearchResult[]> {
         let categories = "";
         let published = "";
 
-        // Check if link is not undefined
+        // Check link is not undefined
         if (entry.link) {
           const pdfLinkElement = entry.link.find(
             (link: any) =>
@@ -182,7 +169,7 @@ async function parseResponse(response: Response): Promise<SearchResult[]> {
           }
         }
 
-        // Check if category is not undefined
+        // Check category is not undefined
         if (entry.category) {
           if (Array.isArray(entry.category)) {
             categories = entry.category.map((category: any) => category.term).join(", ");
@@ -191,7 +178,7 @@ async function parseResponse(response: Response): Promise<SearchResult[]> {
           }
         }
 
-        // Check if published is not undefined
+        // Check published is not undefined
         if (entry.published) {
           published = entry.published[0];
         } else {
