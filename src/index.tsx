@@ -2,9 +2,10 @@ import { ActionPanel, Action, List, Icon, Color } from "@raycast/api";
 import { useFetch } from "@raycast/utils";
 import { useState } from "react";
 import { URLSearchParams } from "node:url";
-import xml2js from "xml2js";
 import { formatDistanceToNow } from "date-fns";
 import natural from "natural";
+import { SearchResult, ArxivCategory, ArxivCategoryColour, SearchListItemProps } from './types';
+import { parseResponse } from './utils';
 
 const DEFAULT_TEXT = "";
 const MAX_RESULTS = 30;
@@ -51,16 +52,7 @@ export default function Command() {
         <List.Section title="Results" subtitle={filteredData?.length + ""}>
           {filteredData?.length == 0 && <List.Item title="No results found" />}
           {filteredData?.map((searchResult: SearchResult) => (
-            <SearchListItem
-              key={searchResult.id ? searchResult.id[0] : ""}
-              id={searchResult.id ? searchResult.id[0] : ""}
-              published={searchResult.published}
-              title={searchResult.title ? searchResult.title[0] : ""}
-              authors={searchResult.authors}
-              category={searchResult.category ? searchResult.category : ""}
-              first_category={searchResult.category ? searchResult.category.split(".")[0] : ""}
-              pdf_link={searchResult.link || ""}
-            />
+            constructSearchListItem(searchResult)
           ))}
         </List.Section>
       )}
@@ -68,26 +60,6 @@ export default function Command() {
   );
 }
 
-function constructSearchQuery(text: string, maxResults: number) {
-  return new URLSearchParams({
-    search_query: text,
-    sortBy: "relevance",
-    sortOrder: "descending",
-    max_results: maxResults.toString(),
-  });
-}
-
-function compareSearchResults(textToCompare: string) {
-  return (a: SearchResult, b: SearchResult) => {
-    const aTitle = a.title ? a.title[0] : "";
-    const bTitle = b.title ? b.title[0] : "";
-
-    const aTitleSimilarity = natural.DiceCoefficient(aTitle, textToCompare);
-    const bTitleSimiarlity = natural.DiceCoefficient(bTitle, textToCompare);
-
-    return bTitleSimiarlity - aTitleSimilarity;
-  };
-}
 
 function SearchListItem({ id, published, title, authors, category, first_category, pdf_link }: SearchListItemProps) {
   const date = new Date(published);
@@ -119,101 +91,37 @@ function SearchListItem({ id, published, title, authors, category, first_categor
   );
 }
 
-async function parseResponse(response: Response): Promise<SearchResult[]> {
-  const parser = new xml2js.Parser({ explicitArray: true, mergeAttrs: true });
-
-  // Read the body content as a string
-  const xml = await response.text();
-
-  // Parse the XML string
-  return parser.parseStringPromise(xml).then((result: any) => {
-    if (result.feed.entry) {
-      return result.feed.entry.map((entry: any) => {
-        let pdfLink = "";
-        let categories = "";
-        let published = "";
-
-        // Check link is not undefined
-        if (entry.link) {
-          const pdfLinkElement = entry.link.find(
-            (link: any) =>
-              link && link.rel && link.rel[0] === "related" && link.type && link.type[0] === "application/pdf"
-          );
-          if (pdfLinkElement && pdfLinkElement.href) {
-            pdfLink = pdfLinkElement.href[0];
-          }
-        }
-
-        // Check category is not undefined
-        if (entry.category) {
-          if (Array.isArray(entry.category)) {
-            categories = entry.category.map((category: any) => category.term).join(", ");
-          } else {
-            categories = entry.category.term;
-          }
-        }
-
-        // Check published is not undefined
-        if (entry.published) {
-          published = entry.published[0];
-        } else {
-          published = "";
-        }
-
-        return {
-          id: entry.id,
-          published: published,
-          title: entry.title,
-          authors: entry.author.map((a: any) => a.name),
-          category: categories,
-          link: pdfLink,
-        };
-      });
-    } else {
-      return [];
-    }
+function constructSearchQuery(text: string, maxResults: number) {
+  return new URLSearchParams({
+    search_query: text,
+    sortBy: "relevance",
+    sortOrder: "descending",
+    max_results: maxResults.toString(),
   });
 }
 
-interface SearchResult {
-  id: string;
-  published: string;
-  title: string;
-  authors: string[];
-  category: string;
-  link: string;
+function compareSearchResults(textToCompare: string) {
+  return (a: SearchResult, b: SearchResult) => {
+    const aTitle = a.title ? a.title[0] : "";
+    const bTitle = b.title ? b.title[0] : "";
+
+    const aTitleSimilarity = natural.DiceCoefficient(aTitle, textToCompare);
+    const bTitleSimiarlity = natural.DiceCoefficient(bTitle, textToCompare);
+
+    return bTitleSimiarlity - aTitleSimilarity;
+  };
 }
 
-enum ArxivCategory {
-  All = "",
-  Physics = "phys",
-  // Physics is split into multiple subcategories
-  Mathematics = "math",
-  ComputerScience = "cs",
-  QuantitativeBiology = "q-bio",
-  QuantitativeFinance = "q-fin",
-  Statistics = "stat",
-  ElectricalEngineeringAndSystemsScience = "eess",
-  Economics = "econ",
-}
+function constructSearchListItem(searchResult: SearchResult) {
 
-enum ArxivCategoryColour {
-  "physics" = Color.Blue,
-  "math" = Color.Green,
-  "cs" = Color.Red,
-  "q-bio" = Color.Yellow,
-  "q-fin" = Color.Purple,
-  "stat" = Color.Orange,
-  "eess" = Color.Purple,
-  "econ" = Color.Magenta,
-}
-
-interface SearchListItemProps {
-  id: string;
-  published: string;
-  title: string;
-  authors: string[];
-  category: string;
-  first_category: string;
-  pdf_link: string;
+  return <SearchListItem
+      key={searchResult.id ? searchResult.id : ""}
+      id={searchResult.id ? searchResult.id[0] : ""}
+      published={searchResult.published}
+      title={searchResult.title ? searchResult.title[0] : ""}
+      authors={searchResult.authors}
+      category={searchResult.category ? searchResult.category : ""}
+      first_category={searchResult.category ? searchResult.category.split(".")[0] : ""}
+      pdf_link={searchResult.link || ""}
+  />
 }
