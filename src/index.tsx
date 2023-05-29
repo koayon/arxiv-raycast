@@ -113,7 +113,6 @@ function compareSearchResults(textToCompare: string) {
 }
 
 function constructSearchListItem(searchResult: SearchResult) {
-
   return <SearchListItem
       key={searchResult.id ? searchResult.id : ""}
       id={searchResult.id ? searchResult.id[0] : ""}

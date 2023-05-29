@@ -3,7 +3,7 @@
   "name": "arxiv",
   "title": "arXiv",
   "description": "Search the arXiv for papers and find citations",
-  "icon": "command-icon.png",
+  "icon": "arxiv-logomark-small.svg",
   "author": "koayon",
   "categories": [
     "Productivity",
