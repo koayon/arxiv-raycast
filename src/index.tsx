@@ -1,9 +1,9 @@
-import { ActionPanel, Action, List, Detail, Icon, Color } from "@raycast/api";
-import { useFetch, Response } from "@raycast/utils";
+import { ActionPanel, Action, List, Icon, Color } from "@raycast/api";
+import { useFetch } from "@raycast/utils";
 import { useState } from "react";
 import { URLSearchParams } from "node:url";
 import xml2js from "xml2js";
-import { add, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import natural from "natural";
 
 const DEFAULT_TEXT = "";
@@ -45,20 +45,25 @@ export default function Command() {
         </List.Dropdown>
       }
     >
-      <List.Section title="Results" subtitle={filteredData?.length + ""}>
-        {filteredData?.map((searchResult: SearchResult) => (
-          <SearchListItem
-            key={searchResult.id ? searchResult.id[0] : ""}
-            id={searchResult.id ? searchResult.id[0] : ""}
-            published={searchResult.published}
-            title={searchResult.title ? searchResult.title[0] : ""}
-            authors={searchResult.authors}
-            category={searchResult.category ? searchResult.category : ""}
-            first_category={searchResult.category ? searchResult.category.split(".")[0] : ""}
-            pdf_link={searchResult.link || ""}
-          />
-        ))}
-      </List.Section>
+      {searchText === "" && filteredData?.length === 0 ? (
+        <List.EmptyView icon={{ source: "../assets/arxiv-logo.png" }} title="Use the search bar above to get started" />
+      ) : (
+        <List.Section title="Results" subtitle={filteredData?.length + ""}>
+          {filteredData?.length == 0 && <List.Item title="No results found" />}
+          {filteredData?.map((searchResult: SearchResult) => (
+            <SearchListItem
+              key={searchResult.id ? searchResult.id[0] : ""}
+              id={searchResult.id ? searchResult.id[0] : ""}
+              published={searchResult.published}
+              title={searchResult.title ? searchResult.title[0] : ""}
+              authors={searchResult.authors}
+              category={searchResult.category ? searchResult.category : ""}
+              first_category={searchResult.category ? searchResult.category.split(".")[0] : ""}
+              pdf_link={searchResult.link || ""}
+            />
+          ))}
+        </List.Section>
+      )}
     </List>
   );
 }
@@ -82,40 +87,6 @@ function compareSearchResults(textToCompare: string) {
 
     return bTitleSimiarlity - aTitleSimilarity;
   };
-}
-
-enum ArxivCategory {
-  All = "",
-  Physics = "phys",
-  // Physics is split into multiple subcategories
-  Mathematics = "math",
-  ComputerScience = "cs",
-  QuantitativeBiology = "q-bio",
-  QuantitativeFinance = "q-fin",
-  Statistics = "stat",
-  ElectricalEngineeringAndSystemsScience = "eess",
-  Economics = "econ",
-}
-
-enum ArxivCategoryColour {
-  "physics" = Color.Blue,
-  "math" = Color.Green,
-  "cs" = Color.Red,
-  "q-bio" = Color.Yellow,
-  "q-fin" = Color.Purple,
-  "stat" = Color.Orange,
-  "eess" = Color.Purple,
-  "econ" = Color.Magenta,
-}
-
-interface SearchListItemProps {
-  id: string;
-  published: string;
-  title: string;
-  authors: string[];
-  category: string;
-  first_category: string;
-  pdf_link: string;
 }
 
 function SearchListItem({ id, published, title, authors, category, first_category, pdf_link }: SearchListItemProps) {
@@ -211,4 +182,38 @@ interface SearchResult {
   authors: string[];
   category: string;
   link: string;
+}
+
+enum ArxivCategory {
+  All = "",
+  Physics = "phys",
+  // Physics is split into multiple subcategories
+  Mathematics = "math",
+  ComputerScience = "cs",
+  QuantitativeBiology = "q-bio",
+  QuantitativeFinance = "q-fin",
+  Statistics = "stat",
+  ElectricalEngineeringAndSystemsScience = "eess",
+  Economics = "econ",
+}
+
+enum ArxivCategoryColour {
+  "physics" = Color.Blue,
+  "math" = Color.Green,
+  "cs" = Color.Red,
+  "q-bio" = Color.Yellow,
+  "q-fin" = Color.Purple,
+  "stat" = Color.Orange,
+  "eess" = Color.Purple,
+  "econ" = Color.Magenta,
+}
+
+interface SearchListItemProps {
+  id: string;
+  published: string;
+  title: string;
+  authors: string[];
+  category: string;
+  first_category: string;
+  pdf_link: string;
 }
