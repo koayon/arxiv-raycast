@@ -1,25 +1,26 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "arxiv",
-  "title": "arXiv",
-  "description": "Search the arXiv for papers and find citations",
-  "icon": "arxiv-logomark-small.svg",
+  "title": "ArXiv Search",
+  "description": "Search the arXiv for papers and find citations. For Researchers, Students and Scholars in Computer Science, Mathematics, Physics, Quantitative Biology, Quantitative Finance, Statistics, Electrical Engineering and Systems Science, and Economics.",
+  "icon": "arxiv-icon.png",
   "author": "koayon",
   "categories": [
     "Productivity",
-    "Web"
+    "Web",
+    "Media"
   ],
   "license": "MIT",
   "commands": [
     {
       "name": "index",
-      "title": "Search arXiv",
+      "title": "Search ArXiv",
       "description": "Search arXiv",
       "mode": "view"
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.51.1",
+    "@raycast/api": "^1.52.1",
     "@raycast/utils": "^1.4.8",
     "date-fns": "^2.23.0",
     "natural": "^6.3.0",

@@ -4,8 +4,8 @@ import { useState } from "react";
 import { URLSearchParams } from "node:url";
 import { formatDistanceToNow } from "date-fns";
 import natural from "natural";
-import { SearchResult, ArxivCategory, ArxivCategoryColour, SearchListItemProps } from './types';
-import { parseResponse } from './utils';
+import { SearchResult, ArxivCategory, ArxivCategoryColour, SearchListItemProps } from "./types";
+import { parseResponse } from "./utils";
 
 const DEFAULT_TEXT = "";
 const MAX_RESULTS = 30;
@@ -14,18 +14,19 @@ export default function Command() {
   const [searchText, setSearchText] = useState("");
   const [category, setCategory] = useState(ArxivCategory.All);
 
-  let { data, isLoading } = useFetch(
+  const { data, isLoading } = useFetch(
     "http://export.arxiv.org/api/query?" + constructSearchQuery(searchText || DEFAULT_TEXT, MAX_RESULTS),
     {
       parseResponse: parseResponse,
     }
   );
 
-  data = data?.sort(compareSearchResults(searchText || DEFAULT_TEXT));
-
-  const filteredData = data?.filter((entry: SearchResult) => {
-    return category == "" || category == "phys" || entry.category.includes(category);
-  });
+  const filteredData = data
+    ?.sort(compareSearchResults(searchText || DEFAULT_TEXT))
+    ?.filter(
+      ({ category: entryCategory }: SearchResult) =>
+        category == "" || category === "phys" || entryCategory.includes(category)
+    );
 
   return (
     <List
@@ -51,15 +52,12 @@ export default function Command() {
       ) : (
         <List.Section title="Results" subtitle={filteredData?.length + ""}>
           {filteredData?.length == 0 && <List.Item title="No results found" />}
-          {filteredData?.map((searchResult: SearchResult) => (
-            constructSearchListItem(searchResult)
-          ))}
+          {filteredData?.map((searchResult: SearchResult) => constructSearchListItem(searchResult))}
         </List.Section>
       )}
     </List>
   );
 }
-
 
 function SearchListItem({ id, published, title, authors, category, first_category, pdf_link }: SearchListItemProps) {
   const date = new Date(published);
@@ -71,15 +69,16 @@ function SearchListItem({ id, published, title, authors, category, first_categor
   const addToAuthor = multipleAuthors ? " et al." : "";
   const primaryAuthor = authorsString.split(",")[0] + addToAuthor;
 
-  const categoryColour = ArxivCategoryColour[first_category as keyof typeof ArxivCategoryColour];
+  const categoryColour = ArxivCategoryColour[
+    first_category as keyof typeof ArxivCategoryColour
+  ] as unknown as Color.ColorLike;
 
   return (
     <List.Item
       id={id}
       icon={{ source: Icon.Circle, tintColor: categoryColour }}
-      title={title}
+      title={{ value: title, tooltip: category }}
       subtitle={primaryAuthor}
-      // subtitle={category}
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open PDF" url={pdf_link} icon={{ source: Icon.Link }} />
@@ -113,7 +112,8 @@ function compareSearchResults(textToCompare: string) {
 }
 
 function constructSearchListItem(searchResult: SearchResult) {
-  return <SearchListItem
+  return (
+    <SearchListItem
       key={searchResult.id ? searchResult.id : ""}
       id={searchResult.id ? searchResult.id[0] : ""}
       published={searchResult.published}
@@ -122,5 +122,6 @@ function constructSearchListItem(searchResult: SearchResult) {
       category={searchResult.category ? searchResult.category : ""}
       first_category={searchResult.category ? searchResult.category.split(".")[0] : ""}
       pdf_link={searchResult.link || ""}
-  />
+    />
+  );
 }
