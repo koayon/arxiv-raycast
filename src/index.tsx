@@ -14,6 +14,7 @@ export default function Command() {
   const [searchText, setSearchText] = useState("");
   const [category, setCategory] = useState(ArxivCategory.All);
 
+  // Load data from arXiv API
   const { data, isLoading } = useFetch(
     "http://export.arxiv.org/api/query?" + constructSearchQuery(searchText || DEFAULT_TEXT, MAX_RESULTS),
     {
@@ -21,6 +22,7 @@ export default function Command() {
     }
   );
 
+  // Sort and filter data based on search text and category
   const filteredData = data
     ?.sort(compareSearchResults(searchText || DEFAULT_TEXT))
     ?.filter(
@@ -51,7 +53,7 @@ export default function Command() {
         <List.EmptyView icon={{ source: "../assets/arxiv-logo.png" }} title="Use the search bar above to get started" />
       ) : (
         <List.Section title="Results" subtitle={filteredData?.length + ""}>
-          {filteredData?.length == 0 && <List.Item title="No results found" />}
+          {filteredData?.length == 0 && <List.Item title="No results found." />}
           {filteredData?.map((searchResult: SearchResult) => constructSearchListItem(searchResult))}
         </List.Section>
       )}
