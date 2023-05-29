@@ -14,33 +14,16 @@ export default function Command() {
   const [category, setCategory] = useState(ArxivCategory.All);
 
   let { data, isLoading } = useFetch(
-    "http://export.arxiv.org/api/query?" +
-      // send the search query to the API
-      new URLSearchParams({
-        search_query: `${searchText.length === 0 ? DEFAULT_TEXT : searchText}`,
-        sortBy: "relevance",
-        sortOrder: "descending",
-        max_results: MAX_RESULTS.toString(),
-      }),
+    "http://export.arxiv.org/api/query?" + constructSearchQuery(searchText || DEFAULT_TEXT, MAX_RESULTS),
     {
       parseResponse: parseResponse,
     }
   );
 
-  // Order data by similarity to search query
-  data = data?.sort((a: SearchResult, b: SearchResult) => {
-    let textToCompare = searchText.length === 0 ? DEFAULT_TEXT : searchText;
-    const aTitle = a.title ? a.title[0] : "";
-    const bTitle = b.title ? b.title[0] : "";
-
-    const aTitleSimilarity = natural.DiceCoefficient(aTitle, textToCompare);
-    const bTitleSimiarlity = natural.DiceCoefficient(bTitle, textToCompare);
-
-    return bTitleSimiarlity - aTitleSimilarity;
-  });
+  data = data?.sort(compareSearchResults(searchText || DEFAULT_TEXT));
 
   const filteredData = data?.filter((entry: SearchResult) => {
-    return category == "" || entry.category.includes(category);
+    return category == "" || category == "phys" || entry.category.includes(category);
   });
 
   return (
@@ -80,9 +63,30 @@ export default function Command() {
   );
 }
 
+function constructSearchQuery(text: string, maxResults: number) {
+  return new URLSearchParams({
+    search_query: text,
+    sortBy: "relevance",
+    sortOrder: "descending",
+    max_results: maxResults.toString(),
+  });
+}
+
+function compareSearchResults(textToCompare: string) {
+  return (a: SearchResult, b: SearchResult) => {
+    const aTitle = a.title ? a.title[0] : "";
+    const bTitle = b.title ? b.title[0] : "";
+
+    const aTitleSimilarity = natural.DiceCoefficient(aTitle, textToCompare);
+    const bTitleSimiarlity = natural.DiceCoefficient(bTitle, textToCompare);
+
+    return bTitleSimiarlity - aTitleSimilarity;
+  };
+}
+
 enum ArxivCategory {
   All = "",
-  Physics = "",
+  Physics = "phys",
   // Physics is split into multiple subcategories
   Mathematics = "math",
   ComputerScience = "cs",
