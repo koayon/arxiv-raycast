@@ -84,7 +84,7 @@ function SearchListItem({ id, published, title, authors, category, first_categor
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open PDF" url={pdf_link} icon={{ source: Icon.Link }} />
-          <Action.CopyToClipboard title="Copy Authors" content={authorsString} icon={{ source: Icon.Redo }} />
+          <Action.CopyToClipboard title="Copy Link" content={pdf_link} icon={{ source: Icon.Redo }} />
         </ActionPanel>
       }
       accessories={accessories}
